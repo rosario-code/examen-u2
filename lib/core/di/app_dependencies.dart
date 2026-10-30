@@ -17,6 +17,11 @@ import '../../features/codigo_qr/domain/usecases/revocar_codigo_qr_use_case.dart
 import '../../features/codigo_qr/presentation/viewmodels/codigo_qr_view_model.dart';
 import '../../features/codigo_qr/presentation/views/codigo_qr_page.dart';
 
+import '../../features/consentimiento/data/consentimiento_secure_storage.dart';
+import '../../features/consentimiento/domain/usecases/consentimiento_use_cases.dart';
+import '../../features/consentimiento/presentation/viewmodels/consentimiento_view_model.dart';
+import '../../features/consentimiento/presentation/views/consentimiento_gate.dart';
+import '../../features/consentimiento/presentation/views/consentimiento_page.dart';
 import '../../features/historial/data/datasources/historial_remote_data_source.dart';
 import '../../features/historial/data/repositories/historial_repository_impl.dart';
 import '../../features/historial/domain/usecases/obtener_historial_use_case.dart';
@@ -133,16 +138,59 @@ final class AppDependencies {
     );
   }
 
-  /// Pantalla inicial: restaura la sesión guardada o muestra el login.
+  /// Decisión de privacidad guardada en el teléfono.
+  static const ConsentimientoSecureStorage _consentimiento =
+      ConsentimientoSecureStorage();
+
+  /// Pantalla inicial: la primera vez pide el consentimiento; después
+  /// restaura la sesión guardada o muestra el login.
   static Widget buildHome() {
     final restaurarSesion = RestaurarORenovarSesionUseCase(
       repository: _loginRepository,
       sessionStorage: _sessionStorage,
     );
-    return SesionGate(
-      restaurarSesion: restaurarSesion.call,
-      construirLogin: (_) => buildBienvenidaPage(),
-      construirInicio: (_) => buildPerfilDigitalPage(),
+    return ConsentimientoGate(
+      hayDecision: () async =>
+          (await ObtenerConsentimientoUseCase(_consentimiento)()).decidido,
+      construirConsentimiento: (_, alTerminar) =>
+          buildConsentimientoPage(primeraVez: true, onGuardado: alTerminar),
+      child: SesionGate(
+        restaurarSesion: restaurarSesion.call,
+        construirLogin: (_) => buildBienvenidaPage(),
+        construirInicio: (_) => buildPerfilDigitalPage(),
+      ),
+    );
+  }
+
+  /// Pantalla de consentimiento (examen U2, ítem 1).
+  static Widget buildConsentimientoPage({
+    required bool primeraVez,
+    required VoidCallback onGuardado,
+  }) {
+    return Builder(
+      builder: (context) => ConsentimientoPage(
+        viewModel: ConsentimientoViewModel(
+          obtener: ObtenerConsentimientoUseCase(_consentimiento),
+          guardar: GuardarConsentimientoUseCase(_consentimiento),
+        ),
+        primeraVez: primeraVez,
+        onGuardado: onGuardado,
+        onVerAvisoPrivacidad: () => abrirAvisoPrivacidad(context),
+      ),
+    );
+  }
+
+  /// «Privacidad» desde el perfil: reabre la pantalla con la decisión
+  /// guardada y vuelve al perfil al guardar.
+  static void abrirConsentimiento(BuildContext context) {
+    final navegador = Navigator.of(context);
+    navegador.push(
+      MaterialPageRoute<void>(
+        builder: (_) => buildConsentimientoPage(
+          primeraVez: false,
+          onGuardado: navegador.pop,
+        ),
+      ),
     );
   }
 
@@ -230,11 +278,22 @@ final class AppDependencies {
               filtro: TipoNotificacion.intentoSospechoso,
             ),
           ),
-          ajustes: AjustesBiometriaTile(
-            estaDisponible: _bloqueo.estaDisponible,
-            estaActivada: _bloqueo.estaActivada,
-            activar: _bloqueo.activar,
-            desactivar: _bloqueo.desactivar,
+          ajustes: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AjustesBiometriaTile(
+                estaDisponible: _bloqueo.estaDisponible,
+                estaActivada: _bloqueo.estaActivada,
+                activar: _bloqueo.activar,
+                desactivar: _bloqueo.desactivar,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => abrirConsentimiento(context),
+                icon: const Icon(Icons.tune),
+                label: const Text('Privacidad'),
+              ),
+            ],
           ),
         );
       },
