@@ -39,6 +39,10 @@ final class UbicacionRepositoryImpl implements UbicacionRepository {
         longitud: posicion.longitude,
         precisionMetros: posicion.accuracy,
         obtenidaEn: posicion.timestamp,
+        altitudMetros: posicion.altitude,
+        velocidadMps: posicion.speed,
+        rumboGrados: posicion.heading,
+        esSimulada: posicion.isMocked,
       );
     } on TimeoutException {
       throw const UbicacionNoDisponibleFailure();
