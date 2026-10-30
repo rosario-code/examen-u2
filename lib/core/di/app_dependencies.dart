@@ -17,8 +17,10 @@ import '../../features/codigo_qr/domain/usecases/revocar_codigo_qr_use_case.dart
 import '../../features/codigo_qr/presentation/viewmodels/codigo_qr_view_model.dart';
 import '../../features/codigo_qr/presentation/views/codigo_qr_page.dart';
 
+import '../../features/consentimiento/data/analitica_en_log.dart';
 import '../../features/consentimiento/data/consentimiento_secure_storage.dart';
 import '../../features/consentimiento/domain/usecases/consentimiento_use_cases.dart';
+import '../../features/consentimiento/domain/usecases/registrar_evento_use_case.dart';
 import '../../features/consentimiento/presentation/viewmodels/consentimiento_view_model.dart';
 import '../../features/consentimiento/presentation/views/consentimiento_gate.dart';
 import '../../features/consentimiento/presentation/views/consentimiento_page.dart';
@@ -162,6 +164,13 @@ final class AppDependencies {
     );
   }
 
+  /// Analítica condicionada al consentimiento: sin «Analítica de uso»
+  /// aceptada, ningún evento sale de la app.
+  static const RegistrarEventoUseCase registrarEvento = RegistrarEventoUseCase(
+    obtenerConsentimiento: ObtenerConsentimientoUseCase(_consentimiento),
+    analitica: AnaliticaEnLog(),
+  );
+
   /// Pantalla de consentimiento (examen U2, ítem 1).
   static Widget buildConsentimientoPage({
     required bool primeraVez,
@@ -172,6 +181,7 @@ final class AppDependencies {
         viewModel: ConsentimientoViewModel(
           obtener: ObtenerConsentimientoUseCase(_consentimiento),
           guardar: GuardarConsentimientoUseCase(_consentimiento),
+          registrarEvento: registrarEvento,
         ),
         primeraVez: primeraVez,
         onGuardado: onGuardado,

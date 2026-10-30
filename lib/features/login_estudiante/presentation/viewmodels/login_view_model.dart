@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../core/error/failure.dart';
+import '../../../../core/log/registro_seguro.dart';
 import '../../domain/entities/flujo_login.dart';
 import '../../domain/usecases/consultar_estado_google_use_case.dart';
 import '../../domain/usecases/iniciar_google_use_case.dart';
@@ -262,7 +263,9 @@ final class LoginViewModel {
 
           case EstadoGoogle.error:
             _pollingActivo = false;
-            debugPrint('DETALLE ERROR GOOGLE: ${resultado.errorMensaje}');
+            RegistroSeguro.error(
+              'Detalle del error de Google: ${resultado.errorMensaje}',
+            );
             _emitir(
               LoginErrorState(
                 mensaje:

@@ -1,5 +1,8 @@
 import '../../../../core/auth/session_token_provider.dart';
+import 'dart:convert';
+
 import '../../../../core/error/failure.dart';
+import '../../../../core/log/registro_seguro.dart';
 import '../../../../core/network/http_gateway.dart';
 import '../../../ubicacion/domain/entities/ubicacion_dispositivo.dart';
 import '../models/codigo_qr_dto.dart';
@@ -22,10 +25,13 @@ final class CodigoQrRemoteDataSourceImpl implements CodigoQrRemoteDataSource {
 
   @override
   Future<CodigoQrDto> generar(UbicacionDispositivo ubicacion) async {
+    final cuerpo = {'ubicacion': ubicacionToJson(ubicacion)};
+    // Evidencia del envío mínimo: el cuerpo exacto que viaja al servidor.
+    RegistroSeguro.info('POST /codigos-qr cuerpo=${jsonEncode(cuerpo)}');
     final response = await _httpGateway.post(
       '/codigos-qr',
       headers: await _autorizacion(),
-      body: {'ubicacion': ubicacionToJson(ubicacion)},
+      body: cuerpo,
     );
     _comprobar(response);
     final datos = response.body?['datos'];
